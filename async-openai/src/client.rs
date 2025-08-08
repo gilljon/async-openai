@@ -14,7 +14,7 @@ use crate::{
     moderation::Moderations,
     traits::AsyncTryFrom,
     Assistants, Audio, AuditLogs, Batches, Chat, Completions, Embeddings, FineTuning, Invites,
-    Models, Projects, Threads, Tokenize, Uploads, Users, VectorStores,
+    Models, Projects, Responses, Threads, Tokenize, Uploads, Users, VectorStores,
 };
 
 #[derive(Debug, Clone, Default)]
