@@ -852,10 +852,13 @@ pub struct CreateChatCompletionRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub web_search_options: Option<WebSearchOptions>,
 
+    /// VLLM
     /// The priority of the message.
-    /// Only supported by VLLM backends.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<i32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guided_json: Option<serde_json::Value>,
 
     /// Deprecated in favor of `tool_choice`.
     ///
