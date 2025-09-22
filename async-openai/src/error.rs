@@ -61,20 +61,47 @@ impl std::fmt::Display for ApiError {
     }
 }
 
-/// Wrapper to deserialize the error object nested in "error" JSON key
-#[derive(Debug, Deserialize, Serialize)]
-pub struct WrappedError {
-    pub error: ApiError,
+impl From<ApiErrorFlex> for ApiError {
+    fn from(err: ApiErrorFlex) -> Self {
+        Self {
+            message: err.message,
+            r#type: err.r#type,
+            param: err.param,
+            code: err.code.map(|code| code.into()),
+        }
+    }
 }
 
-/// Flat error object returned by vLLM API (not wrapped in "error")
+/// More flexible version of `ApiError` to handle `code` field being either a string or an integer.
+/// Used internally to deserialize responses and convert to `ApiError`.
 #[derive(Debug, Deserialize)]
-struct FlatApiError {
-    pub message: String,
-    #[serde(rename = "type")]
-    pub r#type: String,
-    pub param: Option<String>,
-    pub code: Option<u16>,
+struct ApiErrorFlex {
+    message: String,
+    r#type: Option<String>,
+    param: Option<String>,
+    code: Option<ErrorCode>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum ErrorCode {
+    Str(String),
+    Int(u16),
+}
+
+impl Into<String> for ErrorCode {
+    fn into(self) -> String {
+        match self {
+            ErrorCode::Str(s) => s,
+            ErrorCode::Int(i) => i.to_string(),
+        }
+    }
+}
+
+/// Wrapper to deserialize the error object nested in "error" JSON key
+#[derive(Debug, Deserialize)]
+pub struct WrappedError {
+    pub error: ApiErrorFlex,
 }
 
 /// Attempts to parse the response body as an OpenAI error before falling back to
@@ -84,18 +111,12 @@ pub(crate) fn map_deserialization_error(err: serde_json::Error, bytes: &[u8]) ->
 
     // Try to parse as an OpenAI API error first (wrapped)
     if let Ok(wrapped_error) = serde_json::from_slice::<WrappedError>(bytes) {
-        return OpenAIError::ApiError(wrapped_error.error);
+        return OpenAIError::ApiError(wrapped_error.error.into());
     }
 
     // Try to parse as a flat error object
-    if let Ok(flat_error) = serde_json::from_slice::<FlatApiError>(bytes) {
-        let api_error = ApiError {
-            message: flat_error.message,
-            r#type: Some(flat_error.r#type),
-            param: flat_error.param,
-            code: flat_error.code.map(|c| c.to_string()),
-        };
-        return OpenAIError::ApiError(api_error);
+    if let Ok(api_error) = serde_json::from_slice::<ApiErrorFlex>(bytes) {
+        return OpenAIError::ApiError(api_error.into());
     }
 
     // Log the full error detail with original response
@@ -107,4 +128,39 @@ pub(crate) fn map_deserialization_error(err: serde_json::Error, bytes: &[u8]) ->
 
     // Include the response body in the error for better debugging
     OpenAIError::JSONDeserialize(err, response_text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_flex_string() {
+        let json = r#"
+        {
+            "message": "Invalid API key",
+            "type": "invalid_request_error",
+            "param": null,
+            "code": "400"
+        }
+        "#;
+
+        let error: ApiErrorFlex = serde_json::from_str(json).unwrap();
+        assert_eq!(error.code, Some(ErrorCode::Str("400".to_string())));
+    }
+
+    #[test]
+    fn test_flex_int() {
+        let json = r#"
+        {
+            "message": "Rate limit exceeded",
+            "type": "rate_limit_exceeded",
+            "param": "requests",
+            "code": 429
+        }
+        "#;
+
+        let error: ApiErrorFlex = serde_json::from_str(json).unwrap();
+        assert_eq!(error.code, Some(ErrorCode::Int(429)));
+    }
 }
