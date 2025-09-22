@@ -366,22 +366,21 @@ impl<C: Config> Client<C> {
                 let wrapped_error: WrappedError = serde_json::from_slice(bytes.as_ref())
                     .map_err(|e| map_deserialization_error(e, bytes.as_ref()))
                     .map_err(backoff::Error::Permanent)?;
+                let error: ApiError = wrapped_error.into();
 
                 if status.as_u16() == 429
                     // API returns 429 also when:
                     // "You exceeded your current quota, please check your plan and billing details."
-                    && wrapped_error.error.r#type != Some("insufficient_quota".to_string())
+                    && error.r#type != Some("insufficient_quota".to_string())
                 {
                     // Rate limited retry...
-                    tracing::warn!("Rate limited: {}", wrapped_error.error.message);
+                    tracing::warn!("Rate limited: {}", error.message);
                     return Err(backoff::Error::Transient {
-                        err: OpenAIError::ApiError(wrapped_error.error),
+                        err: OpenAIError::ApiError(error),
                         retry_after: None,
                     });
                 } else {
-                    return Err(backoff::Error::Permanent(OpenAIError::ApiError(
-                        wrapped_error.error,
-                    )));
+                    return Err(backoff::Error::Permanent(OpenAIError::ApiError(error)));
                 }
             }
 

@@ -72,6 +72,12 @@ impl From<ApiErrorFlex> for ApiError {
     }
 }
 
+impl From<WrappedError> for ApiError {
+    fn from(wrapped: WrappedError) -> Self {
+        wrapped.error.into()
+    }
+}
+
 /// More flexible version of `ApiError` to handle `code` field being either a string or an integer.
 /// Used internally to deserialize responses and convert to `ApiError`.
 #[derive(Debug, Deserialize)]
