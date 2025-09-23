@@ -28,28 +28,29 @@ byot = []
 
 [dependencies]
 async-openai-macros = { path = "../async-openai-macros", version = "0.1.0" }
-backoff = { version = "0.4.0", features = ["tokio"] }
-base64 = "0.22.1"
-futures = "0.3.31"
-rand = "0.9.0"
-reqwest = { version = "0.12.12", features = [
+axum = { version = "^0.8.0", default-features = false, features = ["json"] }
+backoff = { version = "^0.4.0", features = ["tokio"] }
+base64 = "^0.22.0"
+futures = "^0.3.0"
+rand = "^0.9.0"
+reqwest = { version = "^0.12.0", features = [
   "json",
   "stream",
   "multipart",
 ], default-features = false }
-reqwest-eventsource = "0.6.0"
-serde = { version = "1.0.217", features = ["derive", "rc"] }
-serde_json = "1.0.135"
-thiserror = "2.0.11"
-tokio = { version = "1.43.0", features = ["fs", "macros"] }
-tokio-stream = "0.1.17"
-tokio-util = { version = "0.7.13", features = ["codec", "io-util"] }
-tracing = "0.1.41"
-derive_builder = "0.20.2"
-secrecy = { version = "0.10.3", features = ["serde"] }
-bytes = "1.9.0"
-eventsource-stream = "0.2.3"
-tokio-tungstenite = { version = "0.26.1", optional = true, default-features = false }
+reqwest-eventsource = "^0.6.0"
+serde = { version = "^1.0.0", features = ["derive", "rc"] }
+serde_json = "^1.0.0"
+thiserror = "^2.0.0"
+tokio = { version = "^1.0.0", features = ["fs", "macros"] }
+tokio-stream = "^0.1.0"
+tokio-util = { version = "^0.7.0", features = ["codec", "io-util"] }
+tracing = "^0.1.0"
+derive_builder = "^0.20.0"
+secrecy = { version = "^0.10.0", features = ["serde"] }
+bytes = "^1.0.0"
+eventsource-stream = "^0.2.0"
+tokio-tungstenite = { version = "^0.26.0", optional = true, default-features = false }
 
 [dev-dependencies]
 tokio-test = "0.4.4"

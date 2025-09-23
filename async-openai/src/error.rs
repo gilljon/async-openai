@@ -1,4 +1,5 @@
 //! Errors originating from API calls, parsing responses, and reading-or-writing to the file system.
+use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
@@ -25,6 +26,44 @@ pub enum OpenAIError {
     /// or when builder fails to build request before making API call
     #[error("invalid args: {0}")]
     InvalidArgument(String),
+}
+
+impl axum::response::IntoResponse for OpenAIError {
+    fn into_response(self) -> axum::response::Response {
+        // Return ApiError directly as JSON body
+        if let OpenAIError::ApiError(err) = self {
+            let try_status = err
+                .code
+                .as_ref()
+                .map(|c| StatusCode::from_bytes(c.as_bytes()));
+            let status = match try_status {
+                Some(Ok(code)) => code,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            return (status, axum::Json(err)).into_response();
+        }
+
+        // Infer status code from error type
+        let status_code = match &self {
+            OpenAIError::Reqwest(err) => {
+                if let Some(status) = err.status() {
+                    status
+                } else if err.is_timeout() {
+                    StatusCode::REQUEST_TIMEOUT
+                } else if err.is_connect() {
+                    StatusCode::BAD_GATEWAY
+                } else if err.is_request() {
+                    StatusCode::BAD_REQUEST
+                } else {
+                    StatusCode::INTERNAL_SERVER_ERROR
+                }
+            }
+            OpenAIError::InvalidArgument(_) => StatusCode::BAD_REQUEST,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        (status_code, self.to_string()).into_response()
+    }
 }
 
 /// OpenAI API returns error object on failure
@@ -107,7 +146,7 @@ impl Into<String> for ErrorCode {
 /// Wrapper to deserialize the error object nested in "error" JSON key
 #[derive(Debug, Deserialize)]
 pub struct WrappedError {
-    pub error: ApiErrorFlex,
+    error: ApiErrorFlex,
 }
 
 /// Attempts to parse the response body as an OpenAI error before falling back to
