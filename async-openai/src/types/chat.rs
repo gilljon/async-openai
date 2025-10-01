@@ -623,9 +623,10 @@ pub enum ServiceTier {
 #[derive(Clone, Serialize, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ServiceTierResponse {
-    Scale,
+    Auto,
     Default,
     Flex,
+    Scale,
     Priority,
 }
 
