@@ -1,7 +1,9 @@
 //! Errors originating from API calls, parsing responses, and reading-or-writing to the file system.
+#[cfg(feature = "axum")]
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
+#[cfg(all(feature = "_api", not(target_family = "wasm")))]
 #[derive(Debug, thiserror::Error)]
 pub enum OpenAIError {
     /// Underlying error from reqwest library after an API call was made
@@ -21,13 +23,14 @@ pub enum OpenAIError {
     FileReadError(String),
     /// Error on SSE streaming
     #[error("stream failed: {0}")]
-    StreamError(String),
+    StreamError(Box<StreamError>),
     /// Error from client side validation
     /// or when builder fails to build request before making API call
     #[error("invalid args: {0}")]
     InvalidArgument(String),
 }
 
+#[cfg(feature = "axum")]
 impl axum::response::IntoResponse for OpenAIError {
     fn into_response(self) -> axum::response::Response {
         // Return ApiError directly as JSON body
@@ -151,6 +154,7 @@ pub struct WrappedError {
 
 /// Attempts to parse the response body as an OpenAI error before falling back to
 /// a generic deserialization error with the full response body included for debugging.
+#[cfg(all(feature = "_api", not(target_family = "wasm")))]
 pub(crate) fn map_deserialization_error(err: serde_json::Error, bytes: &[u8]) -> OpenAIError {
     let response_text = String::from_utf8_lossy(bytes).to_string();
 
@@ -165,6 +169,7 @@ pub(crate) fn map_deserialization_error(err: serde_json::Error, bytes: &[u8]) ->
     }
 
     // Log the full error detail with original response
+    #[cfg(feature = "_api")]
     tracing::error!(
         error = %err,
         "Failed to deserialize response: {}",
