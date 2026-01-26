@@ -1,3 +1,4 @@
+#[cfg(feature = "_api")]
 use crate::{
     config::Config,
     error::OpenAIError,
@@ -5,6 +6,7 @@ use crate::{
     Client,
 };
 
+#[cfg(feature = "_api")]
 /// Given chat or completion requests, the model will return the tokens information
 /// pertaining to the request. Only useful if the underlying API server implements
 /// /tokenize endpoint.
@@ -14,6 +16,7 @@ pub struct Tokenize<'c, C: Config> {
     client: &'c Client<C>,
 }
 
+#[cfg(feature = "_api")]
 impl<'c, C: Config> Tokenize<'c, C> {
     pub fn new(client: &'c Client<C>) -> Self {
         Self { client }
